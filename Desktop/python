@@ -1,0 +1,84 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+import os
+
+# File for storing transactions
+FILE_NAME = "finance_data.csv"
+
+# Load existing data or create new DataFrame
+if os.path.exists(FILE_NAME):
+    transactions = pd.read_csv(FILE_NAME)
+else:
+    transactions = pd.DataFrame(columns=["Date", "Category", "Amount", "Type"])
+
+def save_data():
+    """Save transactions to CSV file."""
+    transactions.to_csv(FILE_NAME, index=False)
+
+def add_transaction():
+    """Add income or expense."""
+    date = input("Enter date (YYYY-MM-DD): ")
+    category = input("Enter category (e.g., Food, Rent): ")
+    amount = float(input("Enter amount: "))
+    t_type = input("Enter type (Income/Expense): ").capitalize()
+    global transactions
+    transactions = pd.concat([transactions, pd.DataFrame([[date, category, amount, t_type]], 
+                                            columns=transactions.columns)], ignore_index=True)
+    save_data()
+    print("Transaction added successfully!")
+
+def view_summary():
+    """Display total income, expenses, and balance."""
+    income = transactions[transactions["Type"] == "Income"]["Amount"].sum()
+    expenses = transactions[transactions["Type"] == "Expense"]["Amount"].sum()
+    balance = income - expenses
+    print(f"\nTotal Income: ${income}")
+    print(f"Total Expenses: ${expenses}")
+    print(f"Balance: ${balance}\n")
+
+def visualize_expenses():
+    """Generate a pie chart of expenses by category."""
+    expense_data = transactions[transactions["Type"] == "Expense"].groupby("Category")["Amount"].sum()
+    if expense_data.empty:
+        print("No expense data to visualize.")
+        return
+    expense_data.plot(kind="pie", autopct="%1.1f%%", title="Expense Distribution")
+    plt.show()
+
+def budget_alert():
+    """Check if expenses exceed a budget."""
+    budget = float(input("Enter your monthly budget: "))
+    expenses = transactions[transactions["Type"] == "Expense"]["Amount"].sum()
+    if expenses > budget:
+        print(f"Alert! You have exceeded your budget by ${expenses - budget}.")
+    else:
+        print(f"You are within budget. Remaining: ${budget - expenses}.")
+
+def main_menu():
+    while True:
+        print("\n--- Personal Finance Tracker ---")
+        print("1. Add Transaction")
+        print("2. View Summary")
+        print("3. Visualize Expenses")
+        print("4. Budget Alert")
+        print("5. Exit")
+        choice = input("Choose an option: ")
+        
+        if choice == "1":
+            add_transaction()
+        elif choice == "2":
+            view_summary()
+        elif choice == "3":
+            visualize_expenses()
+        elif choice == "4":
+            budget_alert()
+        elif choice == "5":
+            print("Goodbye!")
+            break
+        else:
+            print("Invalid choice. Please try again.")
+
+# Run the program
+main_menu()
+
+

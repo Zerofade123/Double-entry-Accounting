@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Account Statement - {{ account.name }}</title>
+    <style>
+        /* Include styles from index.html */
+        body {
+            font-family: "Segoe UI", Tahoma, sans-serif;
+            background-color: #f4f6f8;
+            margin: 0;
+            padding: 0;
+        }
+
+        header {
+            background: #1abc9c;
+            color: white;
+            text-align: center;
+            padding: 20px;
+            font-size: 26px;
+            font-weight: bold;
+            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        main {
+            max-width: 1200px;
+            margin: 40px auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            padding: 30px;
+        }
+
+        h2 {
+            color: #34495e;
+            border-bottom: 2px solid #ecf0f1;
+            padding-bottom: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .account-meta {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .balance-card {
+            background: #fff;
+            border: 1px solid #e1e4e8;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .balance-title {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .balance-amount {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .date-filter {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .date-filter input {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-right: 10px;
+        }
+
+        .date-filter button {
+            background: #1abc9c;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f9fafb;
+            font-weight: 600;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f8f8f8;
+        }
+
+        .amount {
+            font-family: monospace;
+            text-align: right;
+        }
+
+        .balance {
+            font-weight: bold;
+            text-align: right;
+        }
+
+        .debit {
+            color: #2ecc71;
+        }
+
+        .credit {
+            color: #e74c3c;
+        }
+
+        .back-link {
+            display: inline-block;
+            padding: 8px 15px;
+            color: #666;
+            text-decoration: none;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+
+        .back-link:hover {
+            background: #f8f9fa;
+        }
+    </style>
+</head>
+<body>
+    <header>📊 Account Statement</header>
+    <main>
+        <a href="/" class="back-link">← Back to Dashboard</a>
+        
+        <h2>
+            {{ account.name }}
+            <small style="font-weight: normal; color: #666;">
+                {{ account.type }} - {{ account.category }}
+            </small>
+        </h2>
+
+        <div class="account-meta">
+            <div class="balance-card">
+                <div class="balance-title">Current Balance</div>
+                <div class="balance-amount">{{ "%.2f"|format(account.balance) }}</div>
+            </div>
+            
+            <div style="display: flex; gap: 20px;">
+                <div class="balance-card" style="flex: 1;">
+                    <div class="balance-title">Total Debits</div>
+                    <div class="balance-amount debit">{{ "%.2f"|format(account.total_debit) }}</div>
+                </div>
+                
+                <div class="balance-card" style="flex: 1;">
+                    <div class="balance-title">Total Credits</div>
+                    <div class="balance-amount credit">{{ "%.2f"|format(account.total_credit) }}</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="date-filter">
+            <form method="get" action="/account/{{ account.name }}">
+                <label for="start_date">From:</label>
+                <input type="date" id="start_date" name="start_date" value="{{ dates.start }}">
+                
+                <label for="end_date">To:</label>
+                <input type="date" id="end_date" name="end_date" value="{{ dates.end }}">
+                
+                <button type="submit">Filter</button>
+            </form>
+        </div>
+
+        {% if error %}
+        <div style="padding:12px;border-radius:8px;background:#ffe6e6;color:#a00;margin-bottom:18px;">
+            <strong>Error:</strong> {{ error }}
+        </div>
+        {% endif %}
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Description</th>
+                    <th>Debit</th>
+                    <th>Credit</th>
+                    <th>Balance</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for entry in statement %}
+                <tr>
+                    <td>{{ entry.date }}</td>
+                    <td>{{ entry.description }}</td>
+                    <td class="amount">{{ "%.2f"|format(entry.debit) if entry.debit > 0 else "" }}</td>
+                    <td class="amount">{{ "%.2f"|format(entry.credit) if entry.credit > 0 else "" }}</td>
+                    <td class="balance">{{ "%.2f"|format(entry.balance) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </main>
+</body>
+</html>

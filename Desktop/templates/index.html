@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Double Entry Accounting App</title>
+    <style>
+        body {
+            font-family: "Segoe UI", Tahoma, sans-serif;
+            background-color: #f4f6f8;
+            margin: 0;
+            padding: 0;
+        }
+
+        header {
+            background: #1abc9c;
+            color: white;
+            text-align: center;
+            padding: 20px;
+            font-size: 26px;
+            font-weight: bold;
+            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        main {
+            max-width: 900px;
+            margin: 40px auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            padding: 30px;
+        }
+
+        h2 {
+            color: #34495e;
+            border-bottom: 2px solid #ecf0f1;
+            padding-bottom: 5px;
+        }
+
+        form {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        label {
+            grid-column: span 2;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        input {
+            grid-column: span 2;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+        }
+
+        button {
+            grid-column: span 2;
+            padding: 12px;
+            background-color: #1abc9c;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+
+        button:hover {
+            background-color: #16a085;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: center;
+        }
+
+        th {
+            background-color: #f9fafb;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f8f8f8;
+        }
+
+        .balance-positive {
+            color: green;
+            font-weight: bold;
+        }
+
+        .balance-negative {
+            color: red;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <header>💼 Double Entry Accounting Dashboard</header>
+    <main>
+        <h2>Record a New Transaction</h2>
+        {% if error %}
+        <div style="padding:12px;border-radius:8px;background:#ffe6e6;color:#a00;margin-bottom:18px;">
+            <strong>Error:</strong> {{ error }}
+        </div>
+        {% endif %}
+        <form method="post" action="/transaction">
+            <label for="description">Transaction Description:</label>
+            <input type="text" id="description" name="description" 
+                   placeholder="Describe the transaction" required
+                   value="{{ form_data.description if form_data else '' }}">
+
+            <label for="debit_account">Debit Account:</label>
+            <select id="debit_account" name="debit_account" required>
+                <option value="">Select account to debit</option>
+                {% for category, subcategories in ACCOUNT_CATEGORIES.items() %}
+                    <optgroup label="{{ category }}">
+                    {% for subcategory in subcategories %}
+                        {% for account in accounts.values() if account.type == category.rstrip('s') and account.category == subcategory %}
+                            <option value="{{ account.name }}"
+                                    {% if form_data and form_data.debit_account == account.name %}selected{% endif %}>
+                                {{ account.name }} ({{ subcategory }})
+                            </option>
+                        {% endfor %}
+                    {% endfor %}
+                    </optgroup>
+                {% endfor %}
+            </select>
+
+            <label for="credit_account">Credit Account:</label>
+            <select id="credit_account" name="credit_account" required>
+                <option value="">Select account to credit</option>
+                {% for category, subcategories in ACCOUNT_CATEGORIES.items() %}
+                    <optgroup label="{{ category }}">
+                    {% for subcategory in subcategories %}
+                        {% for account in accounts.values() if account.type == category.rstrip('s') and account.category == subcategory %}
+                            <option value="{{ account.name }}"
+                                    {% if form_data and form_data.credit_account == account.name %}selected{% endif %}>
+                                {{ account.name }} ({{ subcategory }})
+                            </option>
+                        {% endfor %}
+                    {% endfor %}
+                    </optgroup>
+                {% endfor %}
+            </select>
+
+            <label for="amount">Amount:</label>
+            <input type="number" id="amount" name="amount" 
+                   step="0.01" min="0.01" required
+                   value="{{ form_data.amount if form_data else '' }}"
+                   placeholder="Enter positive amount">
+
+            <button type="submit">Add Transaction</button>
+        </form>
+        
+        <!-- Add account type helper -->
+        <div style="margin-top: 15px; padding: 10px; background: #f8f9fa; border-radius: 6px;">
+            <p style="margin: 0; color: #666;">
+                <strong>💡 Account Types:</strong><br>
+                - Asset accounts (like Cash) normally have debit balances<br>
+                - Liability and Revenue accounts normally have credit balances<br>
+                - Expense accounts normally have debit balances
+            </p>
+        </div>
+
+        <h2>📘 Ledger Accounts</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Account</th>
+                    <th>Total Debit</th>
+                    <th>Total Credit</th>
+                    <th>Balance</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for name, data in accounts.items() %}
+                <tr>
+                    <td>{{ name }}</td>
+                    <td>{{ "%.2f" | format(data.total_debit) }}</td>
+                    <td>{{ "%.2f" | format(data.total_credit) }}</td>
+                    <td class="{{ 'balance-positive' if data.balance >= 0 else 'balance-negative' }}">
+                        {{ "%.2f" | format(data.balance) }}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <h2>🕘 Recent Transactions</h2>
+        {% if transactions and transactions|length > 0 %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Description</th>
+                    <th>Debit</th>
+                    <th>Credit</th>
+                    <th>Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for tx in transactions %}
+                <tr>
+                    <td>{{ tx.date }}</td>
+                    <td style="text-align:left">{{ tx.description }}</td>
+                    <td>{{ tx.debit_account }}</td>
+                    <td>{{ tx.credit_account }}</td>
+                    <td>{{ "%.2f" | format(tx.amount) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p>No transactions yet.</p>
+        {% endif %}
+
+    </main>
+</body>
+</html>
